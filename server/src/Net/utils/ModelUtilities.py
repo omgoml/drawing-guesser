@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import os 
 from env import *
-from Net.model.cnn import Model
+from model.cnn import Model
 
 class ModelUtilites:
     @staticmethod

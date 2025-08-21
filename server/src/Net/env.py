@@ -357,4 +357,3 @@ CATEGORIES = [
     "zebra",
     "zigzag",
 ]
-print(len(CATEGORIES))
