@@ -1,5 +1,6 @@
-from inference.inference import InferenceModel
-from train.TrainingProgress import TrainingProgress
+from Net.inference.inference import InferenceModel
+from Net.train.TrainingProgress import TrainingProgress
+
 def main():
     IModel = InferenceModel()
     
