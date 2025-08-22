@@ -4,6 +4,7 @@ import numpy as np
 import urllib.request
 import json
 import random
+from numpy.typing import NDArray
 from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
 from env import *
@@ -15,6 +16,7 @@ class DatasetHandler(Dataset):
         categories: list[str] | None = None,
         split: Literal["train", "validate", "test"] = "train",
         sample_ratio: float = 0.1,
+        sample_per_category: int = 14400,
         download: bool = True,
         format_type: Literal["numpy", "raw"] = "numpy",
         transform: transforms.Compose | None = None,
@@ -27,7 +29,8 @@ class DatasetHandler(Dataset):
         self.sample_ratio = sample_ratio
         self.transform = transform 
         self.cache_processed = cache_processed
-       
+        self.sample_per_category = sample_per_category
+
         if categories is None: 
             self.categories = CATEGORIES.copy()
         else:
@@ -61,28 +64,74 @@ class DatasetHandler(Dataset):
 
         print(f"Starting download of {len(self.categories)} categories...")
         
+        categories_to_remove = [] 
+
         for i, category in enumerate(self.categories):
+            processed_file = os.path.join(self.data_dir, f"{category}_processed.py")
+
+            if os.path.exists(processed_file):
+                print(f"Category: {category} has already processed")
+                continue
+
             file_name = f"{category.replace(" ", "%20")}{file_ext}"
             url = base_url + file_name  
-            file_path = os.path.join(self.data_dir, f"{category}{file_ext}")
-
-            if os.path.exists(file_path):
-                print(f"Already exists {i+1}/{len(self.categories)}: {category}")
+            temp_file_path = os.path.join(self.data_dir, f"{category}{file_ext}")
 
             try:
                 print(f"Downloading {i+1}/{len(self.categories)}: {category}...")
                 
-                urllib.request.urlretrieve(url, file_path)
+                urllib.request.urlretrieve(url, temp_file_path)
+                
+                print(f"Processing: {category} category...")
+                if format_type == "numpy":
+                    processed_data = self._process_numpy_file(temp_file_path)
+                else:
+                    processed_data = self._process_json_file(temp_file_path)
+                    
+                np.save(processed_file, processed_data)
+                print(f"Saved {len(processed_data)} samples for {category}")
+
+                os.remove(temp_file_path)
 
             except Exception as e:
                 print(f"Error downloading {category}: {e}")
                 
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+
+                categories_to_remove.append(category)
+
                 #removing the falied category 
                 self.categories.remove(category)
         
         print(f"Download complete! Successfully downloaded {len(self.categories)} categories")
 
-    def _load_data(self, format_type: Literal["numpy", "raw"] = "numpy"):
+    def _process_numpy_file(self, file_path:str) -> NDArray:
+        data = np.load(file_path)
+        total_sample = len(data)
+
+        sample_to_take = min(self.sample_per_category, total_sample)
+        return data[:sample_to_take] 
+
+    def _process_json_file(self, file_path:str) -> NDArray:
+        images = [] 
+        sample_collected = 0 
+
+        with open(file_path, "r") as file:
+            for line in file:
+                if sample_collected >= self.sample_per_category:
+                    break 
+
+                drawing = json.loads(line)
+                
+                #only add recognized image prevent outline data
+                if drawing.get("recognized", False):
+                    images.append(self._stroke_to_image(drawing))
+                    sample_collected += 1
+
+        return np.array(images)
+
+    def _load_data(self):
         #storing data for training
         all_data = [] 
         all_labels = [] 
@@ -112,59 +161,12 @@ class DatasetHandler(Dataset):
                 all_labels.extend([idx] * len(data))
 
             else:
-                file_path = os.path.join(self.data_dir, f"{category}.ndjson")
-                if os.path.exists(file_path):
-                    drawings = self._load_ndjson_data(file_path)
-                    images = [self._stroke_to_image(d) for d in drawings]
-                    all_data.append(images)
-                    all_labels.extend([idx] * len(images))
+                print(f"Warning: processed file not found for {category}")
 
-        if format_type == "numpy" and all_data:
+        if all_data:
             return np.concatenate(all_data, axis=0), np.array(all_labels)
         else:
             return np.array(all_data), np.array(all_labels)
-
-    def _load_ndjson_data(self, file_path:str):
-        #storing all the loaded drawing from the dataset
-        drawings = []
-        
-        #checking if the images and labels is recognized by Google prevent the unrelevant data
-        total_recoginized = 0 
-        with open(file_path, "r") as file:
-            for line in file:
-                drawing = json.loads(line)
-
-                if drawing["recoginized"]:
-                    total_recoginized += 1 
-
-        sample_size = int(total_recoginized * self.sample_ratio)
-
-        selected_indices = set(random.sample(range(total_recoginized),sample_size))
-
-        recognized_counter = 0 
-
-        with open(file_path, "r") as file:
-            for line in file:
-                drawing = json.loads(line)
-
-                if drawing["recognized"]:
-                    if recognized_counter in selected_indices:
-                        drawings.append(drawings)
-
-                    recognized_counter += 1 
-        
-        total_sample = len(drawings)
-        train_end = int(0.8 * total_sample)
-        validate_end = int(0.9 * total_sample)
-
-        if self.split == "train":
-            drawings = drawings[:train_end]
-        elif self.split == "validate":
-            drawings = drawings[train_end: validate_end]
-        else:
-            drawings = drawings[validate_end:]
-
-        return drawings
 
     def _stroke_to_image(self, drawing):
 
