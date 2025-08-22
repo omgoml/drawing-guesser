@@ -16,7 +16,7 @@ class DatasetHandler(Dataset):
         categories: list[str] | None = None,
         split: Literal["train", "validate", "test"] = "train",
         sample_ratio: float = 0.1,
-        sample_per_category: int = 14400,
+        sample_per_category: int = 28800,
         download: bool = True,
         format_type: Literal["numpy", "raw"] = "numpy",
         transform: transforms.Compose | None = None,
@@ -67,7 +67,7 @@ class DatasetHandler(Dataset):
         categories_to_remove = [] 
 
         for i, category in enumerate(self.categories):
-            processed_file = os.path.join(self.data_dir, f"{category}_processed.py")
+            processed_file = os.path.join(self.data_dir, f"{category}_processed")
 
             if os.path.exists(processed_file):
                 print(f"Category: {category} has already processed")
@@ -137,7 +137,7 @@ class DatasetHandler(Dataset):
         all_labels = [] 
         for idx, category in enumerate(self.categories):
             #checking the numpy format is available
-            file_path = os.path.join(self.data_dir, f"{category}.npy")
+            file_path = os.path.join(self.data_dir, f"{category}_processed.npy")
             if os.path.exists(file_path):
                 data = np.load(file_path)
 
