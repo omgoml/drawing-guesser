@@ -76,6 +76,6 @@ class InferenceModel:
         img = Image.open(image_path).convert("L")
         img = img.resize((28,28))
 
-        image_tensor = torch.Tensor(self.transform(img))
+        image_tensor = torch.Tensor(img)
 
         return self.predict_single_image(image_tensor)

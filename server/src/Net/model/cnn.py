@@ -38,7 +38,7 @@ class Model(nn.Module):
             nn.Conv2d(in_channels=256,out_channels=512, kernel_size=3, padding=1),
             nn.BatchNorm2d(num_features=512),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=512,out_channels=256,kernel_size=3,padding=1),
+            nn.Conv2d(in_channels=512,out_channels=512,kernel_size=3,padding=1),
             nn.BatchNorm2d(num_features=512),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=dropout_rate * 0.5),

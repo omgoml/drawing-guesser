@@ -1,12 +1,12 @@
-class Handler():
-    @staticmethod
+from flask import render_template
+from Net.inference.inference import InferenceModel
+class Handler:
+    @staticmethod 
     def HomeRoute():
-        pass
+        return render_template("index.html")
+    
+    @staticmethod 
+    def predict():
+       IModel = InferenceModel()
 
-    @staticmethod
-    def WebCanvasRouteHandler():
-        pass
-
-    @staticmethod
-    def CameraCanvasRouteHandler():
-        pass
+       

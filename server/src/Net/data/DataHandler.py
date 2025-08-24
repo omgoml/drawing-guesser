@@ -16,7 +16,7 @@ class DatasetHandler(Dataset):
         categories: list[str] | None = None,
         split: Literal["train", "validate", "test"] = "train",
         sample_ratio: float = 0.1,
-        sample_per_category: int = 28800,
+        sample_per_category: int = 14400,
         download: bool = True,
         format_type: Literal["numpy", "raw"] = "numpy",
         transform: transforms.Compose | None = None,
